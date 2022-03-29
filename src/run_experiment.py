@@ -1,48 +1,71 @@
 import os
-import torch
-from torch.utils.data import DataLoader
-import torch.nn as nn
 import numpy as np
-from models.dataset import ProbeDataset
-from models.model import NeuralNetwork
+import tensorflow as tf
 import load_dataset.data_proc as dp
-from evaluate import train_loop, test_loop
+import matplotlib.pyplot as plt
 
-# Get device
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using {device}  device")
-
-# Dataset & DataLoader
 array = dp.load_file_to_nparr('/home/is/Desktop/CURP/model/load_dataset/data/probe_data/probe_pressure_velocity_density_temperature_1_FOM.npy')
-(data,targets) = dp.dataset_loader(array)
 
-train_size = int(len(data[0])*.8)
-length = len(data[0])
+data = dp.dataset_loader(array)
+(x,y) = np.shape(data)
 
-train_data = data[:,0:train_size]
-test_data = data[:,(train_size+1):length]
+train_size = int(y * 0.8)
+val_size = train_size + int((y * 0.2) / 2.0)
 
-train_targets = targets[0:train_size]
-test_targets = targets[train_size:len(targets)]
+# Labels
+time_set = data[0]
+time_train_labels = time_set[:train_size]
+time_val_labels = time_set[train_size:val_size]
+time_test_labels = time_set[val_size:]
 
-train = ProbeDataset(train_data,train_targets)
-test = ProbeDataset(test_data,test_targets)
+# Data
+train_data = data[1:,:train_size]
+val_data = data[1:,train_size:val_size]
+test_data = data[1:,val_size:]
 
-train_dataloader = DataLoader(train,batch_size=5)
-test_dataloader = DataLoader(test,batch_size=5)
+train_data = tf.reshape(train_data, [train_size, x-1])
+val_data = tf.reshape(val_data, [y-val_size-1, x-1])
+test_data = tf.reshape(test_data, [y-val_size, x-1])
 
-model = NeuralNetwork().to(device)
+train_dataset = tf.data.Dataset.from_tensor_slices((train_data,time_train_labels))
+val_dataset = tf.data.Dataset.from_tensor_slices((val_data,time_val_labels))
+test_dataset = tf.data.Dataset.from_tensor_slices((test_data,time_test_labels))
 
-learning_rate = 1e-3
-batch_size = 64
-epochs = 10
+BATCH_SIZE = 34
+SHUFFLE_BUFFER_SIZE = 10
 
-loss_fn = nn.MSELoss()
-optimizer = torch.optim.SGD(model.parameters(),lr=learning_rate)
+train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
+val_dataset = val_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
+test_dataset = test_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
 
-for t in range(epochs):
-    print(f"Epoch {t+1}\n--------------------------------")
-    train_loop(train_dataloader,model,loss_fn,optimizer)
-    test_loop(test_dataloader,model, loss_fn)
+# Model
 
-print("Done!")
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(4)
+])
+
+model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+              metrics=['sparse_categorical_accuracy'])
+
+
+history = model.fit(train_dataset, epochs=10, validation_data=val_dataset)
+
+print("Evaluate on test data")
+results = model.evaluate(test_dataset)
+print("test loss, test acc: ", results)
+
+print("Generate predictions for 3 samples")
+predictions = model.predict(val_data)
+print("predictions shape:", predictions.shape)
+
+plt.plot(val_data[:,0], time_val_labels, 'r--')
+plt.ylabel('time')
+plt.show()
+
+plt.plot(predictions[:,0], time_val_labels, 'r--')
+plt.ylabel('time')
+plt.show()
+
+

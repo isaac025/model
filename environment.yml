@@ -5,14 +5,10 @@ channels:
   - defaults
 
 dependencies:
-  - python=3.6
+  - python=3.8
   - codecov
   - numpy
-  - pytorch
+  - tensorflow
   - pandas
   - scikit-learn
   - matplotlib
-  - opencv
-
-variables:
-  - PYTHONPATH: /home/is/Desktop/CURP/model
