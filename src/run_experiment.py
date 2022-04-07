@@ -27,9 +27,9 @@ train_data = tf.reshape(train_data, [train_size, x-1])
 val_data = tf.reshape(val_data, [y-val_size-1, x-1])
 test_data = tf.reshape(test_data, [y-val_size, x-1])
 
-train_dataset = tf.data.Dataset.from_tensor_slices((train_data,time_train_labels))
-val_dataset = tf.data.Dataset.from_tensor_slices((val_data,time_val_labels))
-test_dataset = tf.data.Dataset.from_tensor_slices((test_data,time_test_labels))
+train_dataset = tf.data.Dataset.from_tensor_slices((time_train_labels,train_data))
+val_dataset = tf.data.Dataset.from_tensor_slices((time_val_labels,val_data))
+test_dataset = tf.data.Dataset.from_tensor_slices((time_test_labels,test_data))
 
 BATCH_SIZE = 34
 SHUFFLE_BUFFER_SIZE = 10
@@ -53,18 +53,18 @@ model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
 history = model.fit(train_dataset, epochs=10, validation_data=val_dataset)
 
 print("Evaluate on test data")
-results = model.evaluate(test_dataset)
+results = model.evaluate(train_dataset)
 print("test loss, test acc: ", results)
 
 print("Generate predictions for 3 samples")
-predictions = model.predict(val_data)
+predictions = model.predict(train_data)
 print("predictions shape:", predictions.shape)
 
-plt.plot(val_data[:,0], time_val_labels, 'r--')
+plt.plot(train_data[:,0], time_train_labels, 'r--')
 plt.ylabel('time')
 plt.show()
 
-plt.plot(predictions[:,0], time_val_labels, 'r--')
+plt.plot(predictions[:,0], time_train_labels, 'r--')
 plt.ylabel('time')
 plt.show()
 
