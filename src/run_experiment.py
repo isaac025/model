@@ -38,11 +38,11 @@ train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
 val_dataset = val_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
 test_dataset = test_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
 
-# Model
 
 model = tf.keras.Sequential([
     tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(4)
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(10)
 ])
 
 model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
@@ -50,22 +50,21 @@ model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
               metrics=['sparse_categorical_accuracy'])
 
 
-history = model.fit(train_dataset, epochs=10, validation_data=val_dataset)
+history = model.fit(train_data, time_train_labels, epochs=10)
 
 print("Evaluate on test data")
-results = model.evaluate(train_dataset)
+results = model.evaluate(val_data, time_val_labels)
 print("test loss, test acc: ", results)
 
 print("Generate predictions for 3 samples")
-predictions = model.predict(train_data)
+predictions = model.predict(test_data)
 print("predictions shape:", predictions.shape)
 
-plt.plot(train_data[:,0], time_train_labels, 'r--')
-plt.ylabel('time')
+plt.plot(time_test_labels, test_data[:,0], 'r--')
+plt.xlabel('time')
 plt.show()
 
-plt.plot(predictions[:,0], time_train_labels, 'r--')
-plt.ylabel('time')
+plt.plot(time_test_labels, predictions[:,0], 'b--')
+plt.xlabel('time')
 plt.show()
-
 
