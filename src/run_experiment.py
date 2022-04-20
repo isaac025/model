@@ -25,12 +25,13 @@ for i in data2:
 y_train = data2[:1][0] 
 x_test = np.array(list(zip(*ls2)))
 x_test = np.expand_dims(x_test,axis=1)
+
 x_train = np.array(list(zip(*ls)))
 x_train = np.expand_dims(x_train,axis=1)
 
 model = tf.keras.models.Sequential([
   tf.keras.layers.Flatten(input_shape=(1,5)),
-  tf.keras.layers.Dense(128, activation='relu'),
+  tf.keras.layers.Dense(751, activation='relu'),
   tf.keras.layers.Dropout(0.2),
   tf.keras.layers.Dense(10)
 ])
@@ -38,7 +39,6 @@ model = tf.keras.models.Sequential([
 model.summary()
 
 predictions = model(x_train[:1]).numpy()
-print(predictions)
 
 tf.nn.softmax(predictions).numpy()
 
@@ -48,11 +48,24 @@ model.compile(optimizer='adam',
               loss=loss_fn,
               metrics=['accuracy'])
 
-model.fit(x_train, y_train, epochs=5)
-model.evaluate(x_test,  y_train, verbose=2)
+history = model.fit(x_train, y_train, epochs=100)
+results = model.evaluate(x_test,  y_train, verbose=2)
+
+print("test loss, test acc: ", results)
+
 probability_model = tf.keras.Sequential([
   model,
   tf.keras.layers.Softmax()
 ])
-print(probability_model(x_test[:5]))
+print("prob: ", probability_model(x_train[:5]))
+
+predict = model.predict(x_train)
+print(np.shape(predict))
+
+(x,y) = np.shape(predict)
+
+for i in range(0,y):
+    plt.plot(y_train,predict[:,i])
+    plt.xlabel("t (ms)")
+    plt.show()
 
